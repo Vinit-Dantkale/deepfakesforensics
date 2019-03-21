@@ -1,0 +1,5 @@
+opencv-python
+face-alignment
+face_recognition
+face_recognition-models
+tqdm
