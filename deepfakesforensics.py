@@ -18,10 +18,10 @@ class DeepFakesForensics:
     self.real_frames = os.path.join(args.real_frames, self.person_name)
     self.fake_frames = os.path.join(args.fake_frames, self.person_name)
     self.filter_dir = os.path.join(args.filter_dir, self.person_name)
+    self.real_encodings = os.path.join(args.real_encodings, self.person_name)
+    self.fake_encodings = os.path.join(args.fake_encodings, self.person_name)
     self.real_alignments = os.path.join(args.real_alignments, self.person_name)
     self.fake_alignments = os.path.join(args.fake_alignments, self.person_name)
-    self.fake_video_list = []
-    self.real_video_list = []
     self.fps = 20
 
   def create_tree(self):
@@ -58,19 +58,19 @@ class DeepFakesForensics:
     
     video_dir = 'data/videos'
     frame_dir = 'data/frames'
-    align_dir = 'data/alignments'
+    encoding_dir = 'data/encodings'
   
     if type.lower() == 'real':
 
       video_dir = self.real_videos
       frame_dir = self.real_frames
-      align_dir = self.real_alignments
+      encoding_dir = self.real_encodings
 
     elif type.lower() == 'fake':
 
       video_dir = self.fake_videos
       frame_dir = self.fake_frames
-      align_dir = self.fake_alignments
+      encoding_dir = self.fake_encodings
 
     else:
       
@@ -94,9 +94,6 @@ class DeepFakesForensics:
 
     # Initial return value is true
     ret = True
-    
-    # Note start time
-    start_time = time.time()
 
     # Start extracting frames
     for frame_num in tqdm(range(num_frames)):
@@ -132,12 +129,12 @@ class DeepFakesForensics:
 
         break
     
-    sys.stdout.write("Total time taken = " + time.time() - start_time)
-    sys.stdout.write("Number of frames with faces extracted: " + frame_iter, "({}%)".format(frame_iter // frame_num) * 100)
-    alignment_file = os.path.join(align_dir, video_name.replace('.mp4', '') + "_alignments.json")
-    with open(alignment_file, 'w') as fout:
+    string = "Number of frames with faces extracted: " + frame_iter + " ({}%)".format(frame_iter // frame_num) * 100
+    sys.stdout.write(string)
+    encoding_file = os.path.join(encoding_dir, video_name.replace('.mp4', '') + "_encodings.json")
+    with open(encoding_file, 'w') as fout:
       json.dump(unknown_encodings, fout)
-    sys.stdout.write("Wrote alignments to " + alignment_file)
+    sys.stdout.write("Wrote alignments to " + encoding_file)
 
 if __name__ == "__main__":
 
@@ -156,22 +153,26 @@ if __name__ == "__main__":
 
 # Directory where videos will be stored
 
-  parser.add_argument('-rv', '--real_videos', action='store', type=str, default='data/videos/real')
-  parser.add_argument('-fv', '--fake_videos', action='store', default='data/videos/fake')
+  parser.add_argument('-rv', '--real_videos', action='store', type=str, default='data/videos/real', help='Directory where real videos will be stored')
+  parser.add_argument('-fv', '--fake_videos', action='store', default='data/videos/fake', help='Directory where fake videos will be stored')
 
 # Directory where frames will be stored
 
-  parser.add_argument('-rf', '--real_frames', action='store', type=str, default='data/frames/real')
-  parser.add_argument('-ff', '--fake_frames', action='store', type=str, default='data/frames/fake')
+  parser.add_argument('-rf', '--real_frames', action='store', type=str, default='data/frames/real', help='Directory where frames of the person in real videos will be stored')
+  parser.add_argument('-ff', '--fake_frames', action='store', type=str, default='data/frames/fake', help='Directory where frames of the person in fake videos will be stored')
+
+# Directory where the encodings will be stored
+  parser.add_argument('-re', '--real_encodings', action='store', type=str, default='data/encodings/real', help='Directory where facial encodings of the person in real videos will be stored')
+  parser.add_argument('-fe', '--fake_encodings', action='store', type=str, default='data/encodings/fake', help='Directory where facial encodings of the person in fake videos will be stored')
 
 # Directory where alignments will be stored
 
-  parser.add_argument('-ra', '--real_alignments', action='store', type=str, default='data/align/real')
-  parser.add_argument('-fa', '--fake_alignments', action='store', type=str, default='data/align/fake')
+  parser.add_argument('-ra', '--real_alignments', action='store', type=str, default='data/align/real', help='Directory where facial alignments of the person in real videos will be stored')
+  parser.add_argument('-fa', '--fake_alignments', action='store', type=str, default='data/align/fake', help='Directory where facial alignments of the person in fake videos will be stored')
 
 # Directory where the filter will be stored
 
-  parser.add_argument('-f', '--filter_dir', action='store', type=str, default='data/filter/')
+  parser.add_argument('-f', '--filter_dir', action='store', type=str, default='data/filter/', help='Directory where the image of a known person is saved for findiing facial encodings in videos')
 
 # Video arguments
   parser.add_argument('-v', '--video_name', action='store', type=str, default='obama-talking-fake', help='With argument video: Title of downloaded video, \nWith argument extract: Title of the video to be extracted')
