@@ -173,7 +173,9 @@ class DeepFakesForensics:
             found_landmarks.append(
               {
                 'frame': frame_name,
-                'landmarks': face_recognition.face_landmarks(frame)
+                'landmarks': face_recognition.face_landmarks(frame),
+                'encodings': unknown_encoding,
+                'location': face_recognition.face_location(frame)
               }
             )
 
@@ -190,7 +192,7 @@ class DeepFakesForensics:
     
     string = "Number of frames with faces extracted: " + str(frame_iter) + "/" + str(frame_num) + " (" + str((frame_iter / frame_num) * 100) + "%)"
     print(string)
-    landmarks_file = os.path.join(encoding_dir, video_name.replace('.mp4', '') + "_landmarks.json")
+    landmarks_file = os.path.join(landmarks_dir, video_name.replace('.mp4', '') + "_landmarks.json")
     with open(landmarks_file, 'w') as fout:
       json.dump(found_landmarks, fout)
     print("Wrote alignments to " + landmarks_file)
