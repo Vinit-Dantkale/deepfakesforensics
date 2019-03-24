@@ -8,6 +8,8 @@ import sys
 import time
 import face_recognition
 import json
+import face_alignment
+
 
 class DeepFakesForensics:
   
@@ -18,8 +20,8 @@ class DeepFakesForensics:
     self.real_frames = os.path.join(args.real_frames, self.person_name)
     self.fake_frames = os.path.join(args.fake_frames, self.person_name)
     self.filter_dir = os.path.join(args.filter_dir, self.person_name)
-    self.real_encodings = os.path.join(args.real_encodings, self.person_name)
-    self.fake_encodings = os.path.join(args.fake_encodings, self.person_name)
+    self.real_landmarks = os.path.join(args.real_landmarks, self.person_name)
+    self.fake_landmarks = os.path.join(args.fake_landmarks, self.person_name)
     self.real_alignments = os.path.join(args.real_alignments, self.person_name)
     self.fake_alignments = os.path.join(args.fake_alignments, self.person_name)
     self.fps = 20
@@ -32,7 +34,67 @@ class DeepFakesForensics:
     os.makedirs(self.fake_frames)
     os.makedirs(self.real_alignments)
     os.makedirs(self.fake_alignments)
+    os.makedirs(self.real_landmarks)
+    os.makedirs(self.fake_landmarks)
     os.makedirs(self.filter_dir)
+  
+  def get_alignments(self, video_type='fake', cpu=False, align_type='2d'):
+    
+    frame_dir = 'data/frames'
+    align_dir = 'data/align'
+    landmarks_type = face_alignment.LandmarksType._2D
+
+    if align_type == '2d':
+      landmarks_type = face_alignment.LandmarksType._2D
+    elif align_type == '3d':
+      landmarks_type = face_alignment.LandmarksType._3D
+    else:
+      raise Exception("Invalid alignment type!")
+
+    if video_type.lower() == 'fake':
+      
+      frame_dir = self.fake_frames
+      align_dir = self.fake_alignments
+
+    elif video_type.lower() =='real':
+      
+      frame_dir = self.real_frames
+      align_dir = self.real_alignments
+
+    else:
+      raise Exception('Invalid Video Type!')
+
+    device = 'cuda'
+    if cpu:
+      device = 'cpu'
+    else:
+      device = 'cuda'
+
+    imgs_list = os.listdir(frame_dir)
+
+    fa = face_alignment.FaceAlignment(landmarks_type, flip_input=False, device=device, face_detector='sfd')
+
+    alignment_file = os.path.join(align_dir, self.person_name, video_type, align_type + "_alignments.json")
+
+
+    fout = open(alignment_file, 'w')
+
+    for img_item in tqdm.tqdm(imgs_list):
+      img_path = os.path.join(frame_dir, img_item)
+      img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+      img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+      pred = fa.get_landmarks(img)
+      alignment = {
+        'frame': img_path,
+        'alignments': pred
+      }
+      json.dump(alignment, fout)
+    
+    fout.close()
+    
+    
+    
+      
 
   def download_videos(self, video_name='obama-talking-fake', url='https://www.youtube.com/watch?v=cQ54GDm1eL0', type='fake'):
     if type.lower() == 'real':  
@@ -58,19 +120,19 @@ class DeepFakesForensics:
     
     video_dir = 'data/videos'
     frame_dir = 'data/frames'
-    encoding_dir = 'data/encodings'
+    encoding_dir = 'data/landmarks'
   
     if type.lower() == 'real':
 
       video_dir = self.real_videos
       frame_dir = self.real_frames
-      encoding_dir = self.real_encodings
+      encoding_dir = self.real_landmarks
 
     elif type.lower() == 'fake':
 
       video_dir = self.fake_videos
       frame_dir = self.fake_frames
-      encoding_dir = self.fake_encodings
+      encoding_dir = self.fake_landmarks
 
     else:
       
@@ -85,12 +147,12 @@ class DeepFakesForensics:
 
     # Initialize counter variables
     frame_num = 0
-    unknown_encodings = []
+    found_landmarks = []
     frame_iter = frame_num
 
     # Get known image and it's encoding
     known_image = face_recognition.load_image_file(os.path.join(self.filter_dir, self.person_name + ".jpg"))
-    known_encoding = face_recognition.face_encodings(known_image)
+    known_encoding = face_recognition.face_landmarks(known_image)
 
     # Initial return value is true
     ret = True
@@ -101,20 +163,17 @@ class DeepFakesForensics:
         
         ret, frame = capture.read()
 
-        # turns out there is no need to convert BGR2RGB nowadays
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
         try:
-          unknown_encoding = face_recognition.face_encodings(frame)[0]
+          unknown_encoding = face_recognition.face_landmarks(frame)[0]
           if face_recognition.compare_faces([known_encoding], unknown_encoding):
 
             frame_name = os.path.join(frame_dir, video_name.replace('.mp4', '') + "{:05d}.jpg".format(frame_iter))
             cv2.imwrite(frame_name, frame)
 
-            unknown_encodings.append(
+            found_landmarks.append(
               {
                 'frame': frame_name,
-                'encodings': unknown_encoding
+                'landmarks': face_recognition.face_landmarks(frame)
               }
             )
 
@@ -129,12 +188,12 @@ class DeepFakesForensics:
 
         break
     
-    string = "Number of frames with faces extracted: " + frame_iter + " ({}%)".format(frame_iter // frame_num) * 100
-    sys.stdout.write(string)
-    encoding_file = os.path.join(encoding_dir, video_name.replace('.mp4', '') + "_encodings.json")
-    with open(encoding_file, 'w') as fout:
-      json.dump(unknown_encodings, fout)
-    sys.stdout.write("Wrote alignments to " + encoding_file)
+    string = "Number of frames with faces extracted: " + str(frame_iter) + "/" + str(frame_num) + " (" + str((frame_iter / frame_num) * 100) + "%)"
+    print(string)
+    landmarks_file = os.path.join(encoding_dir, video_name.replace('.mp4', '') + "_landmarks.json")
+    with open(landmarks_file, 'w') as fout:
+      json.dump(found_landmarks, fout)
+    print("Wrote alignments to " + landmarks_file)
 
 if __name__ == "__main__":
 
@@ -161,9 +220,9 @@ if __name__ == "__main__":
   parser.add_argument('-rf', '--real_frames', action='store', type=str, default='data/frames/real', help='Directory where frames of the person in real videos will be stored')
   parser.add_argument('-ff', '--fake_frames', action='store', type=str, default='data/frames/fake', help='Directory where frames of the person in fake videos will be stored')
 
-# Directory where the encodings will be stored
-  parser.add_argument('-re', '--real_encodings', action='store', type=str, default='data/encodings/real', help='Directory where facial encodings of the person in real videos will be stored')
-  parser.add_argument('-fe', '--fake_encodings', action='store', type=str, default='data/encodings/fake', help='Directory where facial encodings of the person in fake videos will be stored')
+# Directory where the landmarks will be stored
+  parser.add_argument('-re', '--real_landmarks', action='store', type=str, default='data/landmarks/real', help='Directory where facial landmarks of the person in real videos will be stored')
+  parser.add_argument('-fe', '--fake_landmarks', action='store', type=str, default='data/landmarks/fake', help='Directory where facial landmarks of the person in fake videos will be stored')
 
 # Directory where alignments will be stored
 
@@ -172,7 +231,7 @@ if __name__ == "__main__":
 
 # Directory where the filter will be stored
 
-  parser.add_argument('-f', '--filter_dir', action='store', type=str, default='data/filter/', help='Directory where the image of a known person is saved for findiing facial encodings in videos')
+  parser.add_argument('-f', '--filter_dir', action='store', type=str, default='data/filter/', help='Directory where the image of a known person is saved for findiing facial landmarks in videos')
 
 # Video arguments
   parser.add_argument('-v', '--video_name', action='store', type=str, default='obama-talking-fake', help='With argument video: Title of downloaded video, \nWith argument extract: Title of the video to be extracted')
@@ -181,6 +240,14 @@ if __name__ == "__main__":
 # Type of video [real or fake]
 
   parser.add_argument('-t', '--type', action='store', type=str, default='fake', help='Video is real or fake')
+
+# Whether to use GPU or CPU in alignment part
+
+  parser.add_argument('-c', '--cpu', action='store_true', default=False, help='Use CPU while finding alignments')
+
+# Finding 3d alignments for the face
+
+  parser.add_argument('-3d', '--align_3d', action='store_true', default=False, help='Find 3d alignments for the faces')
 
   args = parser.parse_args()
 
@@ -195,5 +262,12 @@ if __name__ == "__main__":
   elif args.task == 'extract':
     forensics.extract_person_frames(video_name=args.video_name + ".mp4", type=args.type)
 
+
+  elif args.task == 'align':
+    if args.align_3d:
+      align_type = '3d'
+    else:
+      align_type = '2d'
+    forensics.get_alignments(video_type=args.type, cpu=args.cpu, align_type=align_type)
   else:
     raise Exception("Probably not done yet")
