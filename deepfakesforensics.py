@@ -152,7 +152,7 @@ class DeepFakesForensics:
 
     # Get known image and it's encoding
     known_image = face_recognition.load_image_file(os.path.join(self.filter_dir, self.person_name + ".jpg"))
-    known_encoding = face_recognition.face_landmarks(known_image)
+    known_encoding = face_recognition.face_encodings(known_image)
 
     # Initial return value is true
     ret = True
@@ -164,7 +164,7 @@ class DeepFakesForensics:
         ret, frame = capture.read()
 
         try:
-          unknown_encoding = face_recognition.face_landmarks(frame)[0]
+          unknown_encoding = face_recognition.face_encodings(frame)[0]
           if face_recognition.compare_faces([known_encoding], unknown_encoding):
 
             frame_name = os.path.join(frame_dir, video_name.replace('.mp4', '') + "{:05d}.jpg".format(frame_iter))
