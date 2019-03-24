@@ -120,19 +120,19 @@ class DeepFakesForensics:
     
     video_dir = 'data/videos'
     frame_dir = 'data/frames'
-    encoding_dir = 'data/landmarks'
+    landmarks_dir = 'data/landmarks'
   
     if type.lower() == 'real':
 
       video_dir = self.real_videos
       frame_dir = self.real_frames
-      encoding_dir = self.real_landmarks
+      landmarks_dir = self.real_landmarks
 
     elif type.lower() == 'fake':
 
       video_dir = self.fake_videos
       frame_dir = self.fake_frames
-      encoding_dir = self.fake_landmarks
+      landmarks_dir = self.fake_landmarks
 
     else:
       
@@ -221,8 +221,8 @@ if __name__ == "__main__":
   parser.add_argument('-ff', '--fake_frames', action='store', type=str, default='data/frames/fake', help='Directory where frames of the person in fake videos will be stored')
 
 # Directory where the landmarks will be stored
-  parser.add_argument('-re', '--real_landmarks', action='store', type=str, default='data/landmarks/real', help='Directory where facial landmarks of the person in real videos will be stored')
-  parser.add_argument('-fe', '--fake_landmarks', action='store', type=str, default='data/landmarks/fake', help='Directory where facial landmarks of the person in fake videos will be stored')
+  parser.add_argument('-rl', '--real_landmarks', action='store', type=str, default='data/landmarks/real', help='Directory where facial landmarks of the person in real videos will be stored')
+  parser.add_argument('-fl', '--fake_landmarks', action='store', type=str, default='data/landmarks/fake', help='Directory where facial landmarks of the person in fake videos will be stored')
 
 # Directory where alignments will be stored
 
