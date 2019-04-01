@@ -191,7 +191,7 @@ if __name__ == "__main__":
   parser.add_argument('-fl', '--fake_landmarks', action='store', type=str, default='data/landmarks/fake', help='Directory where facial landmarks of the person in fake videos will be stored')
 
   """ Which type of landmark tenchnique to be used"""
-  parser.add_argument('-lt', '--landmark_technique', action='store', type=str, default='fan', help='Which alignment technique to be used for landmarking.')
+  parser.add_argument('-lt', '--landmark_technique', action='store', type=str, default='fr', help='Which alignment technique to be used for landmarking. Default: face_recognition library')
 
   """ Directory where the filter will be stored"""
 
@@ -225,6 +225,9 @@ if __name__ == "__main__":
 
   elif args.task == 'extract':
     forensics.extract_frames()
+  
+  elif args.task == 'align':
+    forensics.get_landmarks()
 
   else:
     raise Exception("Probably not done yet")
